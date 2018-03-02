@@ -35,20 +35,12 @@ class Point(object):
         sumA = 0
         for x in squares:
             sumA += math.pow(x, 2)
-        return math.sqrt(sumA)
-    def sqDistance(self, point):
-        squares = list()
-        for i in range(0, 4):
-            squares.append(self.array[i] - point.array[i])
-        sumA = 0
-        for x in squares:
-            sumA += math.pow(x, 2)
         return sumA
 
 def wc_sse(points, centroids):
     summ = 0
     for i in points:
-        summ += i.sqDistance(centroids[i.cluster])
+        summ += i.distance(centroids[i.cluster])
     return summ
 
 def kmeans(points, k):
@@ -84,9 +76,9 @@ def kmeans(points, k):
             newpoint = Point(sums[i], -1)
             centroids[i] = newpoint
         sse_new = wc_sse(points, centroids)
-        if math.fabs(sse_new - sse) < 0.005:
+        if math.fabs(sse_new - sse) < 0.025:
             condition = False
-        print str(sse) + ',' + str(sse_new)
+        #print str(sse) + ',' + str(sse_new)
         sse = sse_new
 
     with open('points.csv', 'w') as csvfile:
