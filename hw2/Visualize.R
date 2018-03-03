@@ -7,7 +7,7 @@ points <- read.csv(file="points.csv", header = TRUE, quote = "\"", comment.char 
 dummy <- read.csv(file="dummy.csv", header = TRUE, quote = "\"", comment.char = "")
 centroids <- read.csv(file="centroids.csv", header = TRUE, quote = "\"", comment.char = "")
 
-cluster <- kmeans(yelp2, 32, 20)
+cluster <- kmeans(yelp2, 32, 300, algorithm = "MacQueen")
 
 plot(yelp2$reviewCount, yelp2$checkins, col=allColors[cluster$cluster])
 #plot(yelp2$reviewCount, yelp2$checkins, col=allColors[points$cluster + 1])

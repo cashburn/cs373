@@ -18,6 +18,7 @@ class Point(object):
     def __init__(self, array, ind):
         self.array = array
         self.index = ind
+        self.distances = [None] * n
         self.latitude = array[0]
         self.longitude = array[1]
         self.reviewCount = array[2]
@@ -36,6 +37,23 @@ class Point(object):
         for x in squares:
             sumA += math.pow(x, 2)
         return sumA
+
+class Cluster(object):
+    def __init__(self, pointArray, clusterIndex):
+        self.points = pointArray
+        self.distances = [None]*n
+        self.index = clusterIndex
+    def avgDist(self, cluster):
+        clustSum = 0
+        linkCount = 0
+        for i in self.points:
+            for j in cluster.points:
+                clustSum += i.distance(j)
+                linkCount += 1
+        return clustSum / linkCount
+    def merge(self, cluster):
+        self.points += cluster.points
+
 
 def wc_sse(points, centroids):
     summ = 0
@@ -97,14 +115,58 @@ def kmeans(points, k):
     for i in range(0, k):
         print 'Centroid' + str(i+1) + '=' + centroids[i].toString()
 
-def agglomerative(points):
-    pass
+def agglomerative_preprocess(clusters):
+    for i in range(0, n):
+        for j in range(0, n):
+            if clusters[j].distances[i] != None:
+                clusters[i].distances[j] = clusters[j].distances[i]
+            else:
+                clusters[i].distances[j] = clusters[i].avgDist(clusters[j])
+            clusters[i].points[0].cluster = i
+
+def agglomerative(clusters, k):
+    print 'Precomputing distances'
+    agglomerative_preprocess(clusters)
+    print 'Finished preprocessing for k=' + str(k)
+
+    numClusters = len(clusters)
+
+    while numClusters > k:
+        print str(numClusters) + ' clusters'
+        minI = [0, 0]
+        minIAvg = -1
+        for i in range(0, len(clusters)):
+            minIndex = 0
+            minAvg = -1
+            if clusters[i] is None:
+                continue
+            for a in range(0, len(clusters)):
+                if a == i:
+                    continue
+                if clusters[a] is None:
+                    continue
+                avg = clusters[i].avgDist(clusters[a])
+                if (avg < minAvg or minAvg <= 0) and avg != 0:
+                    minAvg = avg
+                    minIndex = a
+            if (avg < minIAvg or minIAvg <= 0) and avg != 0:
+                minIAvg = avg
+                minI = [i, minIndex]
+            #print str(i) + ': ' + str(minI) + ' at ' + str(minIAvg)
+        clusters[minI[0]].merge(clusters[minI[1]])
+        numClusters -= 1
+        clusters[minI[1]] = None
+        print 'clustered ' + str(minI[1]) + ' into ' + str(minI[0])
+    print 'finished clustering'
 pointList = list()
+clusterList = list()
 for index in range(0, n):
-    pointList.append(Point(X[index], index))
+    p = Point(X[index], index)
+    pointList.append(p)
+    clusterList.append(Cluster([p], index))
 if sys.argv[3] == 'km':
     kmeans(pointList, int(K))
 elif sys.argv[3] == 'ac':
-    agglomerative(pointList)
+    agglomerative(clusterList, int(K))
 else:
     print 'Invalid clustering method'
