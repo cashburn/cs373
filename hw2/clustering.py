@@ -2,6 +2,7 @@ import random
 import math
 import csv
 import sys
+from Queue import PriorityQueue
 import pandas as pd
 
 if len(sys.argv) != 4:
@@ -52,7 +53,6 @@ class Cluster(object):
                 linkCount += 1
         return clustSum / linkCount
     def merge(self, clusters, rightI):
-        print 'merge start'
         for i in range(n):
             if clusters[i] is None:
                 continue
@@ -62,7 +62,7 @@ class Cluster(object):
             oldSize2 = len(clusters[rightI].points) * len(clusters[i].points)
             oldSum1 = self.distances[i] * oldSize1
             oldSum2 = clusters[rightI].distances[i] * oldSize2
-            newAvg = (oldSize1 + oldSize2) / (oldSum1 + oldSum2)
+            newAvg = (oldSum1 + oldSum2) / (oldSize1 + oldSize2)
             self.distances[i] = newAvg
             clusters[i].distances[self.index] = newAvg
         for i in range(n):
@@ -71,7 +71,6 @@ class Cluster(object):
             clusters[i].distances[rightI] = None
         self.points += clusters[rightI].points
         clusters[rightI] = None
-        print 'merge end'
 
 def wc_sse(points, centroids):
     summ = 0
@@ -133,49 +132,55 @@ def kmeans(points, k):
     for i in range(0, k):
         print 'Centroid' + str(i+1) + '=' + centroids[i].toString()
 
-def agglomerative_preprocess(clusters):
+def agglomerative_preprocess(clusters, q):
     for i in range(0, n):
         for j in range(0, n):
+            if i == j:
+                clusters[i].distances[j] = 0
+                continue
             if clusters[j].distances[i] != None:
-                clusters[i].distances[j] = clusters[j].distances[i]
+                avg = clusters[j].distances[i]
             else:
-                clusters[i].distances[j] = clusters[i].avgDist(clusters[j])
+                avg = clusters[i].avgDist(clusters[j])
+                q.put((avg, [i, j]))
+            clusters[i].distances[j] = avg
             clusters[i].points[0].cluster = i
 
 def agglomerative(clusters, k):
+    q = PriorityQueue()
     print 'Precomputing distances'
-    agglomerative_preprocess(clusters)
+    agglomerative_preprocess(clusters, q)
     print 'Finished preprocessing for k=' + str(k)
 
     numClusters = len(clusters)
 
     while numClusters > k:
-        print str(numClusters) + ' clusters - finding min'
-        minI = [0, 0]
-        minIAvg = -1
-        for i in range(0, len(clusters)):
-            minIndex = 0
-            minAvg = -1
-            if clusters[i] is None:
-                continue
-            for a in range(0, len(clusters)):
-                if clusters[a] is None:
-                    continue
-                if a == i:
-                    continue
-                avg = clusters[i].distances[a]
-                if (avg < minAvg or minAvg <= 0) and avg != 0:
-                    minAvg = avg
-                    minIndex = a
-            if (avg < minIAvg or minIAvg <= 0) and avg != 0:
-                minIAvg = avg
-                minI = [i, minIndex]
+        minI = q.get()[1]
+        if clusters[minI[0]] is None or clusters[minI[1]] is None:
+            continue
             #print str(i) + ': ' + str(minI) + ' at ' + str(minIAvg)
-        print 'Min found'
         clusters[minI[0]].merge(clusters, minI[1])
         numClusters -= 1
         print 'clustered ' + str(minI[1]) + ' into ' + str(minI[0])
+        print str(numClusters) + ' clusters'
     print 'finished clustering'
+    with open('points.csv', 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(['index', 'cluster'])
+        count = 0
+        for i in clusters:
+            if i is None:
+                continue
+            for j in i.points:
+                writer.writerow([j.index, count])
+            count += 1
+    with open('centroids.csv', 'w') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(['latitude', 'longitude', 'reviewCount', 'checkins'])
+        for i in clusters:
+            if i is None:
+                continue
+            writer.writerow(i.points[0].array)
 pointList = list()
 clusterList = list()
 for index in range(0, n):
