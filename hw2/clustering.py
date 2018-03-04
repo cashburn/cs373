@@ -51,9 +51,27 @@ class Cluster(object):
                 clustSum += i.distance(j)
                 linkCount += 1
         return clustSum / linkCount
-    def merge(self, cluster):
-        self.points += cluster.points
-
+    def merge(self, clusters, rightI):
+        print 'merge start'
+        for i in range(n):
+            if clusters[i] is None:
+                continue
+            if self.distances[i] is None:
+                print str(i)
+            oldSize1 = len(self.points) * len(clusters[i].points)
+            oldSize2 = len(clusters[rightI].points) * len(clusters[i].points)
+            oldSum1 = self.distances[i] * oldSize1
+            oldSum2 = clusters[rightI].distances[i] * oldSize2
+            newAvg = (oldSize1 + oldSize2) / (oldSum1 + oldSum2)
+            self.distances[i] = newAvg
+            clusters[i].distances[self.index] = newAvg
+        for i in range(n):
+            if clusters[i] is None:
+                continue
+            clusters[i].distances[rightI] = None
+        self.points += clusters[rightI].points
+        clusters[rightI] = None
+        print 'merge end'
 
 def wc_sse(points, centroids):
     summ = 0
@@ -132,7 +150,7 @@ def agglomerative(clusters, k):
     numClusters = len(clusters)
 
     while numClusters > k:
-        print str(numClusters) + ' clusters'
+        print str(numClusters) + ' clusters - finding min'
         minI = [0, 0]
         minIAvg = -1
         for i in range(0, len(clusters)):
@@ -141,11 +159,11 @@ def agglomerative(clusters, k):
             if clusters[i] is None:
                 continue
             for a in range(0, len(clusters)):
-                if a == i:
-                    continue
                 if clusters[a] is None:
                     continue
-                avg = clusters[i].avgDist(clusters[a])
+                if a == i:
+                    continue
+                avg = clusters[i].distances[a]
                 if (avg < minAvg or minAvg <= 0) and avg != 0:
                     minAvg = avg
                     minIndex = a
@@ -153,9 +171,9 @@ def agglomerative(clusters, k):
                 minIAvg = avg
                 minI = [i, minIndex]
             #print str(i) + ': ' + str(minI) + ' at ' + str(minIAvg)
-        clusters[minI[0]].merge(clusters[minI[1]])
+        print 'Min found'
+        clusters[minI[0]].merge(clusters, minI[1])
         numClusters -= 1
-        clusters[minI[1]] = None
         print 'clustered ' + str(minI[1]) + ' into ' + str(minI[0])
     print 'finished clustering'
 pointList = list()
